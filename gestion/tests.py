@@ -2,6 +2,7 @@ from django.test import TestCase
 from .models import Usuario, Vehiculo
 from rest_framework.test import APIClient
 from rest_framework import status
+from gestion.models import Turno, Chequeo
 
 class UsuarioModelTest(TestCase):
     def setUp(self):
@@ -178,3 +179,113 @@ class MantenimientoAPITest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.data), 1)
 
+class TurnoAPITest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.usuario = Usuario.objects.create(
+            nombre="Ana",
+            email="ana@example.com",
+            rol="Dueño"
+        )
+        self.vehiculo = Vehiculo.objects.create(
+            marca="Peugeot",
+            modelo="208",
+            anio=2022,
+            patente="CCC333",
+            estado="Activo",
+            usuario=self.usuario
+        )
+        self.url = '/api/turnos/'
+
+    def test_crear_turno_via_api(self):
+        """Verifica que se pueda crear un turno para revisión mediante la API"""
+        data = {
+            "vehiculo": self.vehiculo.id,
+            "fecha": "2025-12-01",
+            "hora": "09:00:00",
+            "estado": "Pendiente"
+        }
+        response = self.client.post(self.url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['estado'], "Pendiente")
+
+    def test_listar_turnos(self):
+        """Verifica que el endpoint GET devuelva los turnos existentes"""
+        Turno.objects.create(
+            vehiculo=self.vehiculo,
+            fecha="2025-12-02",
+            hora="10:30:00",
+            estado="Confirmado"
+        )
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(len(response.data), 1)
+
+
+class ChequeoAPITest(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.usuario = Usuario.objects.create(
+            nombre="Patricio",
+            email="patricio@example.com",
+            rol="Inspector"
+        )
+        self.vehiculo = Vehiculo.objects.create(
+            marca="Peugeot",
+            modelo="208",
+            anio=2021,
+            patente="DDD444",
+            estado="En revisión",
+            usuario=self.usuario
+        )
+        self.turno = Turno.objects.create(
+            vehiculo=self.vehiculo,
+            fecha="2025-11-15",
+            hora="10:00:00",
+            estado="Confirmado"
+        )
+        self.url = '/api/chequeos/'
+
+    def test_crear_chequeo_via_api(self):
+        """Verifica que se pueda registrar un chequeo asociado a un turno"""
+        data = {
+            "turno": self.turno.id,
+            "evaluador": self.usuario.id,
+            "puntos": {
+                "frenos": 8,
+                "luces": 9,
+                "neumaticos": 10,
+                "direccion": 7,
+                "suspension": 9,
+                "motor": 8,
+                "escape": 9,
+                "seguridad": 10
+            },
+            "observaciones": "Chequeo general correcto"
+        }
+        response = self.client.post(self.url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn(response.data['resultado'], ['Seguro', 'Aprobado', 'Rechequeo', 'En evaluación'])
+
+    def test_listar_chequeos(self):
+        """Verifica que el endpoint GET devuelva los chequeos realizados"""
+        from gestion.models import Chequeo
+        Chequeo.objects.create(
+            turno=self.turno,
+            evaluador=self.usuario,
+            puntos={
+                "frenos": 8,
+                "luces": 8,
+                "neumaticos": 9,
+                "direccion": 9,
+                "suspension": 10,
+                "motor": 8,
+                "escape": 9,
+                "seguridad": 8
+            },
+            total=69,
+            resultado="Aprobado"
+        )
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(len(response.data), 1)

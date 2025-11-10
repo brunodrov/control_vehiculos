@@ -1,6 +1,6 @@
 from rest_framework import viewsets
-from .models import Usuario, Vehiculo, Mantenimiento, ReporteEstado
-from .serializers import UsuarioSerializer, VehiculoSerializer, MantenimientoSerializer, ReporteEstadoSerializer
+from .models import Usuario, Vehiculo, Mantenimiento, ReporteEstado, Turno, Chequeo
+from .serializers import UsuarioSerializer, VehiculoSerializer, MantenimientoSerializer, ReporteEstadoSerializer, TurnoSerializer, ChequeoSerializer
 
 # Vista para Usuarios
 class UsuarioViewSet(viewsets.ModelViewSet):
@@ -21,3 +21,14 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
 class ReporteEstadoViewSet(viewsets.ModelViewSet):
     queryset = ReporteEstado.objects.all()
     serializer_class = ReporteEstadoSerializer
+
+# Vista para Turnos
+class TurnoViewSet(viewsets.ModelViewSet):
+    queryset = Turno.objects.all()
+    serializer_class = TurnoSerializer
+
+
+# Vista para Chequeos
+class ChequeoViewSet(viewsets.ModelViewSet):
+    queryset = Chequeo.objects.all()
+    serializer_class = ChequeoSerializer

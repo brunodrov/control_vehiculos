@@ -41,3 +41,30 @@ class ReporteEstado(models.Model):
     def __str__(self):
         return f"Reporte {self.fecha} - {self.vehiculo.patente}"
 
+class Turno(models.Model):
+    vehiculo = models.ForeignKey(Vehiculo, on_delete=models.CASCADE, related_name='turnos')
+    fecha = models.DateField()
+    hora = models.TimeField()
+    estado = models.CharField(max_length=20, default='Pendiente')  # Pendiente, Confirmado, Completado
+
+    def __str__(self):
+        return f"Turno {self.fecha} - {self.vehiculo.patente}"
+
+
+class Chequeo(models.Model):
+    turno = models.OneToOneField(Turno, on_delete=models.CASCADE, related_name='chequeo')
+    evaluador = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True)
+    puntos = models.JSONField()  # 8 puntos, ej: {"frenos":8, "luces":9, ...}
+    total = models.IntegerField(default=0)
+    observaciones = models.TextField(blank=True)
+    resultado = models.CharField(max_length=20, default='En evaluación')  # Seguro, Rechequeo
+
+    def calcular_resultado(self):
+        self.total = sum(self.puntos.values())
+        if self.total >= 80:
+            self.resultado = "Seguro"
+        elif self.total < 40 or any(p < 5 for p in self.puntos.values()):
+            self.resultado = "Rechequeo"
+        else:
+            self.resultado = "Aprobado"
+        self.save()

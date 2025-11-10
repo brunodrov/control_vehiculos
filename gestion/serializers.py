@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Usuario, Vehiculo, Mantenimiento, ReporteEstado
+from .models import Usuario, Vehiculo, Mantenimiento, ReporteEstado, Turno, Chequeo
 
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:
@@ -19,4 +19,15 @@ class MantenimientoSerializer(serializers.ModelSerializer):
 class ReporteEstadoSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReporteEstado
+        fields = '__all__'
+
+class TurnoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Turno
+        fields = '__all__'
+
+
+class ChequeoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Chequeo
         fields = '__all__'
