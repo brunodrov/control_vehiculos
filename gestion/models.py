@@ -54,10 +54,10 @@ class Turno(models.Model):
 class Chequeo(models.Model):
     turno = models.OneToOneField(Turno, on_delete=models.CASCADE, related_name='chequeo')
     evaluador = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True)
-    puntos = models.JSONField()  # 8 puntos, ej: {"frenos":8, "luces":9, ...}
+    puntos = models.JSONField()  # 8 puntos: {"frenos":8, "luces":9, ...}
     total = models.IntegerField(default=0)
     observaciones = models.TextField(blank=True)
-    resultado = models.CharField(max_length=20, default='En evaluación')  # Seguro, Rechequeo
+    resultado = models.CharField(max_length=20, default='En evaluación')
 
     def calcular_resultado(self):
         self.total = sum(self.puntos.values())
@@ -67,4 +67,10 @@ class Chequeo(models.Model):
             self.resultado = "Rechequeo"
         else:
             self.resultado = "Aprobado"
-        self.save()
+
+    def save(self, *args, **kwargs):
+        self.calcular_resultado()  # <-- ejecuta el cálculo automáticamente
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Chequeo turno {self.turno.id} - {self.resultado}"
