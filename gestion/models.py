@@ -69,7 +69,7 @@ class Chequeo(models.Model):
             self.resultado = "Aprobado"
 
     def save(self, *args, **kwargs):
-        self.calcular_resultado()  # <-- ejecuta el cálculo automáticamente
+        self.calcular_resultado()  
         super().save(*args, **kwargs)
 
     def __str__(self):
