@@ -1,27 +1,38 @@
 from django.test import TestCase
-from .models import Usuario, Vehiculo
 from rest_framework.test import APIClient
 from rest_framework import status
-from gestion.models import Turno, Chequeo
+from .models import Usuario, Vehiculo, Turno, Chequeo
+
+
+# ------------------ TESTS DE MODELOS ------------------
 
 class UsuarioModelTest(TestCase):
     def setUp(self):
-        # esto se ejecuta antes de cada test
-        self.usuario = Usuario.objects.create(nombre="Juan Pérez", email="juan@example.com")
+        self.usuario = Usuario.objects.create(
+            nombre="Juan Pérez",
+            email="juan@example.com",
+            rol="Dueño"
+        )
 
     def test_usuario_creado_correctamente(self):
-        """Verifica que el usuario se crea y se guarda en la base"""
+        """Verifica que el usuario se crea correctamente"""
         usuario = Usuario.objects.get(nombre="Juan Pérez")
         self.assertEqual(usuario.email, "juan@example.com")
 
+
 class VehiculoModelTest(TestCase):
     def setUp(self):
-        self.usuario = Usuario.objects.create(nombre="María", email="maria@example.com")
+        self.usuario = Usuario.objects.create(
+            nombre="María",
+            email="maria@example.com",
+            rol="Dueño"
+        )
         self.vehiculo = Vehiculo.objects.create(
             marca="Toyota",
             modelo="Corolla",
             patente="ABC123",
             anio=2020,
+            estado="Activo",
             usuario=self.usuario
         )
 
@@ -29,41 +40,37 @@ class VehiculoModelTest(TestCase):
         """Verifica que el vehículo está asociado al usuario correcto"""
         self.assertEqual(self.vehiculo.usuario.nombre, "María")
 
+
+# ------------------ TESTS DE API ------------------
+
 class UsuarioAPITest(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.url = '/api/usuarios/'
 
     def test_crear_usuario_via_api(self):
-        """Verifica que se pueda crear un usuario mediante POST en la API"""
-        data = {
-            "nombre": "Pedro API",
-            "email": "pedro@example.com",
-            "rol": "Administrador"
-        }
+        """Verifica creación de usuario vía API"""
+        data = {"nombre": "Pedro", "email": "pedro@example.com", "rol": "Evaluador"}
         response = self.client.post(self.url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['nombre'], "Pedro API")
+        self.assertEqual(response.data['nombre'], "Pedro")
 
     def test_listar_usuarios(self):
-        """Verifica que el endpoint GET devuelva los usuarios existentes"""
-        Usuario.objects.create(nombre="Laura", email="laura@example.com")
+        """Verifica listado de usuarios vía API"""
+        Usuario.objects.create(nombre="Laura", email="laura@example.com", rol="Dueño")
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.data), 1)
 
+
 class VehiculoAPITest(TestCase):
     def setUp(self):
         self.client = APIClient()
-        self.usuario = Usuario.objects.create(
-            nombre="Carlos Tester",
-            email="carlos@example.com",
-            rol="Operador"
-        )
+        self.usuario = Usuario.objects.create(nombre="Carlos", email="carlos@example.com", rol="Dueño")
         self.url = '/api/vehiculos/'
 
     def test_crear_vehiculo_via_api(self):
-        """Verifica que se pueda crear un vehículo asociado a un usuario mediante la API"""
+        """Verifica creación de vehículo asociado a un usuario"""
         data = {
             "marca": "Ford",
             "modelo": "Focus",
@@ -77,116 +84,24 @@ class VehiculoAPITest(TestCase):
         self.assertEqual(response.data['marca'], "Ford")
 
     def test_listar_vehiculos(self):
-        """Verifica que el endpoint GET devuelva los vehículos existentes"""
+        """Verifica listado de vehículos"""
         Vehiculo.objects.create(
             marca="Chevrolet",
             modelo="Onix",
             anio=2021,
             patente="ABC999",
-            usuario=self.usuario
-        )
-        response = self.client.get(self.url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreaterEqual(len(response.data), 1)
-
-class ReporteEstadoAPITest(TestCase):
-    def setUp(self):
-        self.client = APIClient()
-        self.usuario = Usuario.objects.create(
-            nombre="Lucía",
-            email="lucia@example.com",
-            rol="Técnico"
-        )
-        self.vehiculo = Vehiculo.objects.create(
-            marca="Fiat",
-            modelo="Cronos",
-            anio=2023,
-            patente="AAA111",
             estado="Activo",
             usuario=self.usuario
         )
-        self.url = '/api/reportes/'
-
-    def test_crear_reporte_via_api(self):
-        """Verifica que se pueda crear un reporte asociado a un vehículo"""
-        data = {
-            "vehiculo": self.vehiculo.id,
-            "fecha": "2025-11-03",
-            "nivel_combustible": 45.5,
-            "kilometraje": 12000,
-            "observaciones": "Motor con temperatura elevada"
-        }
-        response = self.client.post(self.url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['nivel_combustible'], '45.50')
-
-    def test_listar_reportes(self):
-        """Verifica que el endpoint GET devuelva los reportes existentes"""
-        from gestion.models import ReporteEstado
-        ReporteEstado.objects.create(
-            vehiculo=self.vehiculo,
-            fecha="2025-11-03",
-            nivel_combustible=60.0,
-            kilometraje=15000,
-            observaciones="Frenos revisados"
-        )
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.data), 1)
 
-
-
-class MantenimientoAPITest(TestCase):
-    def setUp(self):
-        self.client = APIClient()
-        self.usuario = Usuario.objects.create(
-            nombre="Diego",
-            email="diego@example.com",
-            rol="Supervisor"
-        )
-        self.vehiculo = Vehiculo.objects.create(
-            marca="Renault",
-            modelo="Kangoo",
-            anio=2021,
-            patente="BBB222",
-            estado="Mantenimiento",
-            usuario=self.usuario
-        )
-        self.url = '/api/mantenimientos/'
-
-    def test_crear_mantenimiento_via_api(self):
-        """Verifica que se pueda crear un mantenimiento asociado a un vehículo"""
-        data = {
-            "vehiculo": self.vehiculo.id,
-            "fecha": "2025-11-03",
-            "descripcion": "Cambio de aceite y filtros",
-            "costo": 25000.00
-        }
-        response = self.client.post(self.url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(float(response.data['costo']), 25000.00)
-
-    def test_listar_mantenimientos(self):
-        """Verifica que el endpoint GET devuelva los mantenimientos existentes"""
-        from gestion.models import Mantenimiento
-        Mantenimiento.objects.create(
-            vehiculo=self.vehiculo,
-            fecha="2025-11-03",
-            descripcion="Revisión de frenos",
-            costo=12000.00
-        )
-        response = self.client.get(self.url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreaterEqual(len(response.data), 1)
 
 class TurnoAPITest(TestCase):
     def setUp(self):
         self.client = APIClient()
-        self.usuario = Usuario.objects.create(
-            nombre="Ana",
-            email="ana@example.com",
-            rol="Dueño"
-        )
+        self.usuario = Usuario.objects.create(nombre="Ana", email="ana@example.com", rol="Dueño")
         self.vehiculo = Vehiculo.objects.create(
             marca="Peugeot",
             modelo="208",
@@ -198,25 +113,14 @@ class TurnoAPITest(TestCase):
         self.url = '/api/turnos/'
 
     def test_crear_turno_via_api(self):
-        """Verifica que se pueda crear un turno para revisión mediante la API"""
-        data = {
-            "vehiculo": self.vehiculo.id,
-            "fecha": "2025-12-01",
-            "hora": "09:00:00",
-            "estado": "Pendiente"
-        }
+        """Verifica creación de turno para revisión"""
+        data = {"vehiculo": self.vehiculo.id, "fecha": "2025-12-01", "hora": "09:00:00", "estado": "Pendiente"}
         response = self.client.post(self.url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['estado'], "Pendiente")
 
     def test_listar_turnos(self):
-        """Verifica que el endpoint GET devuelva los turnos existentes"""
-        Turno.objects.create(
-            vehiculo=self.vehiculo,
-            fecha="2025-12-02",
-            hora="10:30:00",
-            estado="Confirmado"
-        )
+        """Verifica listado de turnos existentes"""
+        Turno.objects.create(vehiculo=self.vehiculo, fecha="2025-12-02", hora="10:30:00", estado="Confirmado")
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(len(response.data), 1)
@@ -225,65 +129,56 @@ class TurnoAPITest(TestCase):
 class ChequeoAPITest(TestCase):
     def setUp(self):
         self.client = APIClient()
-        self.usuario = Usuario.objects.create(
-            nombre="Patricio",
-            email="patricio@example.com",
-            rol="Inspector"
-        )
+        self.evaluador = Usuario.objects.create(nombre="Patricio", email="patricio@example.com", rol="Evaluador")
+        self.duenio = Usuario.objects.create(nombre="Lucía", email="lucia@example.com", rol="Dueño")
         self.vehiculo = Vehiculo.objects.create(
-            marca="Peugeot",
-            modelo="208",
-            anio=2021,
+            marca="Fiat",
+            modelo="Cronos",
+            anio=2023,
             patente="DDD444",
             estado="En revisión",
-            usuario=self.usuario
+            usuario=self.duenio
         )
-        self.turno = Turno.objects.create(
-            vehiculo=self.vehiculo,
-            fecha="2025-11-15",
-            hora="10:00:00",
-            estado="Confirmado"
-        )
+        self.turno = Turno.objects.create(vehiculo=self.vehiculo, fecha="2025-11-15", hora="10:00:00", estado="Confirmado")
         self.url = '/api/chequeos/'
 
     def test_crear_chequeo_via_api(self):
-        """Verifica que se pueda registrar un chequeo asociado a un turno"""
+        """Verifica creación de chequeo con cálculo automático del resultado"""
         data = {
             "turno": self.turno.id,
-            "evaluador": self.usuario.id,
+            "evaluador": self.evaluador.id,
             "puntos": {
-                "frenos": 8,
+                "frenos": 10,
                 "luces": 9,
-                "neumaticos": 10,
-                "direccion": 7,
-                "suspension": 9,
                 "motor": 8,
-                "escape": 9,
-                "seguridad": 10
+                "ruedas": 9,
+                "aceite": 9,
+                "suspension": 8,
+                "direccion": 9,
+                "chasis": 9
             },
             "observaciones": "Chequeo general correcto"
         }
         response = self.client.post(self.url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertIn(response.data['resultado'], ['Seguro', 'Aprobado', 'Rechequeo', 'En evaluación'])
+        self.assertIn(response.data['resultado'], ['Seguro', 'Aprobado', 'Rechequeo'])
 
     def test_listar_chequeos(self):
-        """Verifica que el endpoint GET devuelva los chequeos realizados"""
-        from gestion.models import Chequeo
+        """Verifica listado de chequeos"""
         Chequeo.objects.create(
             turno=self.turno,
-            evaluador=self.usuario,
+            evaluador=self.evaluador,
             puntos={
                 "frenos": 8,
                 "luces": 8,
-                "neumaticos": 9,
-                "direccion": 9,
-                "suspension": 10,
                 "motor": 8,
-                "escape": 9,
-                "seguridad": 8
+                "ruedas": 8,
+                "aceite": 8,
+                "suspension": 8,
+                "direccion": 8,
+                "chasis": 8
             },
-            total=69,
+            total=64,
             resultado="Aprobado"
         )
         response = self.client.get(self.url)

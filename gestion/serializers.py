@@ -1,25 +1,18 @@
 from rest_framework import serializers
-from .models import Usuario, Vehiculo, Mantenimiento, ReporteEstado, Turno, Chequeo
+from .models import Usuario, Vehiculo, Turno, Chequeo, puntos_por_defecto
+
 
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Usuario
-        fields = '__all__'   # Usa todos los campos del modelo
+        fields = '__all__'
+
 
 class VehiculoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vehiculo
         fields = '__all__'
 
-class MantenimientoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Mantenimiento
-        fields = '__all__'
-
-class ReporteEstadoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ReporteEstado
-        fields = '__all__'
 
 class TurnoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -28,6 +21,13 @@ class TurnoSerializer(serializers.ModelSerializer):
 
 
 class ChequeoSerializer(serializers.ModelSerializer):
+    puntos = serializers.JSONField(default=puntos_por_defecto)
+
     class Meta:
         model = Chequeo
         fields = '__all__'
+
+    def create(self, validated_data):
+        instance = super().create(validated_data)
+        instance.calcular_resultado()
+        return instance
